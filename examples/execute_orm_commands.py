@@ -84,8 +84,8 @@ device_ids = set([cmd.id for cmd in cmds_on_machine.commands])
 
 
 class SteererCollection(Device):
-    """
-    """
+    """ """
+
     col = DynamicDeviceComponent(
         {
             dev_name: (Steerer, "Anonym:DT:" + dev_name, dict(lazy=True))

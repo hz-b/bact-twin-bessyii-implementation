@@ -1,10 +1,7 @@
-from typing import Tuple
-
 from bact_twin_architecture.data_model.identifiers import DevicePropertyID, LatticeElementPropertyID
 from bact_twin_architecture.interfaces.id_property_transformer import (
     IdentifierPropertyTransformerBase,
 )
-# from bact_twin_architecture.interfaces.identifier import DeviceIdentifier
 
 
 class IdentifierPropertyTransformer(IdentifierPropertyTransformerBase):
@@ -25,5 +22,5 @@ class IdentifierPropertyTransformer(IdentifierPropertyTransformerBase):
         else:
             raise NotImplementedError(f"not handling {property}. I am a hack anyway")
 
-    def inverse(self, id, property):
+    def inverse(self, id_ : DevicePropertyID) -> LatticeElementPropertyID:
         raise NotImplementedError(f"not handling {property}. I am a hack anyway")

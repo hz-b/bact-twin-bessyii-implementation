@@ -15,6 +15,8 @@ import pandas as pd
 from bact_twin_architecture.data_model.identifiers import LatticeElementPropertyID, DevicePropertyID, ConversionID
 from bact_twin_architecture.data_model.unit_conversion_info import LinearUnitConversionInfo
 
+from bact_twin_bessyii_impl.bl.family_tree import ValidFamilyNames, BessyIIFamilyTree
+
 logger = logging.getLogger("bact-twin-bessyii-impl")
 
 
@@ -206,4 +208,14 @@ class PyTACRepository:
             unit_conv=unit_conv,
             lattice_pos_to_device_mapping = self.lattice_pos_to_device_mapping
         )
-        pass
+
+def create_bessyii_family_tree(repo):
+    families = {
+        ValidFamilyNames.vertical_steerers.value: repo.family_repo["VCM"],
+        # I decided: no dipole steerers in vertical steerers
+        # as standard praxis at HZB
+        ValidFamilyNames.horizontal_steerers.value: [
+            name for name in repo.family_repo["HCM"] if not "BM" in name
+        ],
+    }
+    return BessyIIFamilyTree(families=families)

@@ -3,6 +3,7 @@ from typing import Sequence, Dict
 from bact_twin_architecture.data_model.command import Command
 from bact_twin_architecture.interfaces.measurement_execution_engine import MeasurementExecutionEngine
 import bluesky.plan_stubs as bps
+from bluesky.run_engine import RunEngine
 
 
 def commands_as_messages(devices, commands : Sequence[Command]):
@@ -30,7 +31,7 @@ def commands_execution_plan(devices, commands: Sequence[Command]):
 
 
 class BlueskyMeasurementExecutionEngine(MeasurementExecutionEngine):
-    def __init__(self, run_engine: bluesky.RunEngine, devices : Dict[object]):
+    def __init__(self, run_engine: RunEngine, devices : Dict[str, object]):
         """
 
         Todo:

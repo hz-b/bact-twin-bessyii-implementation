@@ -101,14 +101,14 @@ def create_device_repository(
     return devices_property_mapping
 
 
-@dataclass
+@dataclass(frozen=True)
 class LinearUnitConversionInfo:
     """
     """
     position_name : Union[str, None]
     device_name : str
     property : str
-    intecept : float
+    intercept : float
     slope : float
 
 
@@ -152,7 +152,7 @@ def create_state_conversion_repository(
             device_name=device_name,
             property=item.field,
             slope=slope,
-            intecept=intercept
+            intercept=intercept
         )
 
     r = [

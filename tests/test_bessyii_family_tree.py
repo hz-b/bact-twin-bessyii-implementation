@@ -1,10 +1,13 @@
-from bact_twin_bessyii_impl.bl.io.pytac_repositories import create_bessyii_family_tree, PyTACRepository
+from bact_twin_bessyii_impl.bl.io.pytac_repositories import (
+    create_bessyii_family_tree,
+    PyTACRepository,
+)
 
 repo = PyTACRepository()
 
+
 def test_load_data():
-    """Todo: need to load pytac data properly
-    """
+    """Todo: need to load pytac data properly"""
 
     bessyii_family_tree = create_bessyii_family_tree(repo)
     vt_sts = bessyii_family_tree.get("vertical_steerers")

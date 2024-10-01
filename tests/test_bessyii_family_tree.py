@@ -1,6 +1,3 @@
-import pytest
-from pathlib import Path
-
 from bact_twin_bessyii_impl.bl.family_tree import PyTACBasedBessyIIFamilyTree
 from bact_twin_bessyii_impl.bl.io.pytac_repositories import PyTACRepository
 

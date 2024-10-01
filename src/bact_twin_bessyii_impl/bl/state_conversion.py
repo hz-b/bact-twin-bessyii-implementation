@@ -57,13 +57,38 @@ class UnitConversionRepo:
         obj =  lut[(pos_name, property)]
         return obj
 
+
+class PropertyRenamer:
+    """I guess that will not be that simple
+
+    Todo:
+        implement it properrly!
+        Should map id, property to id, property
+    """
+    def forward(self, id: str, property: str) -> str:
+        if property == "x_kick":
+            return "current"
+        elif property == "y_kick":
+            return "current"
+        else:
+            raise NotImplementedError(f"not handling {property}. I am hack anyway")
+
 class UnitConversionFacade:
+    """
+    Todo:
+        split it up in different objects?
+        seems to have more than one responsibility
+    """
     def __init__(self, unit_conversion_repo : UnitConversionRepo):
         """create the factory based on the repo that reads in the pytac files
         """
         self.unit_conversion_repo = unit_conversion_repo
+        self.property_renamer = PropertyRenamer()
 
-    def get(self, id: Identifier, property: str) -> UnitConversion:
+    def get_conversion_info(self, id: Identifier, property: str) -> LinearUnitConversionInfo:
+        return self.unit_conversion_repo.get(id, property)
+
+    def get_converter(self, id: Identifier, property: str) -> UnitConversion:
         """
         Todo:
             revisit to be far more flexible: not only linear conversion
@@ -81,17 +106,22 @@ class UnitConversionFacade:
 
             These then start to mix
         """
-        return self.get(id, property).forward(value)
+        return self.get_converter(id, property).forward(value)
 
     def update_inverse(self, id: Identifier, property: str, value: float) -> float:
-        return self.get(id, property).inverse(value)
-
-
+        return self.get_converter(id, property).inverse(value)
 
     def command_rewrite_forward(self, cmd : Command) -> Command:
-        return Command(
-            id=cmd.id,
-            property=cmd.property,
-            value=self.update_forward(cmd.id, cmd.property, cmd.value),
+        """
+        Todo:
+            just take it out and make it a function?
+        """
+        info = self.get_conversion_info(cmd.id, cmd.property)
+        assert info.device_name is not None
+        ncmd = Command(
+            id=info.device_name,
+            property=self.property_renamer.forward(id=cmd.id, property=cmd.property),
+            value=self.update_forward(id=cmd.id, property=cmd.property, value=cmd.value),
             behaviour_on_error=cmd.behaviour_on_error
         )
+        return ncmd

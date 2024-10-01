@@ -6,5 +6,5 @@ def test_pytac_repo_load():
     """just check that it loads
     """
     repo = PyTACRepository()
-    r = repo.get("vertical_steerers")
-    print(r)
+    repo.device_repo
+    repo.family_repo

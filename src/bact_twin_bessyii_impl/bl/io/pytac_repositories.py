@@ -12,6 +12,10 @@ from typing import Sequence, Union, Dict
 
 import numpy as np
 import pandas as pd
+from bact_twin_architecture.data_model.identifiers import LatticeElementPropertyID, DevicePropertyID, ConversionID
+from bact_twin_architecture.data_model.unit_conversion_info import LinearUnitConversionInfo
+
+from bact_twin_bessyii_impl.bl.family_tree import ValidFamilyNames, BessyIIFamilyTree
 
 logger = logging.getLogger("bact-twin-bessyii-impl")
 
@@ -101,22 +105,14 @@ def create_device_repository(
     return devices_property_mapping
 
 
-@dataclass(frozen=True)
-class LinearUnitConversionInfo:
-    """
-    """
-    position_name : Union[str, None]
-    device_name : str
-    property : str
-    intercept : float
-    slope : float
+
 
 
 def create_state_conversion_repository(
         element_names : Sequence[str],
         poly_data_info : pd.DataFrame,
         unit_conv : pd.DataFrame,
-        lattice_pos_to_device_mapping: Dict[str, str]
+        lattice_pos_to_device_mapping: Dict[str, Dict[str, str]]
 ):
 
     # for debugging purposes ... find an element in the list
@@ -148,9 +144,10 @@ def create_state_conversion_repository(
         if device_name is None:
             pass
         return LinearUnitConversionInfo(
-            position_name=elem_name,
-            device_name=device_name,
-            property=item.field,
+            conversion_id=ConversionID(
+                lattice_property_id=LatticeElementPropertyID(element_name=elem_name, property=item.field),
+                device_property_id=DevicePropertyID(device_name=device_name,property=None)
+            ),
             slope=slope,
             intercept=intercept
         )
@@ -211,4 +208,14 @@ class PyTACRepository:
             unit_conv=unit_conv,
             lattice_pos_to_device_mapping = self.lattice_pos_to_device_mapping
         )
-        pass
+
+def create_bessyii_family_tree(repo):
+    families = {
+        ValidFamilyNames.vertical_steerers.value: repo.family_repo["VCM"],
+        # I decided: no dipole steerers in vertical steerers
+        # as standard praxis at HZB
+        ValidFamilyNames.horizontal_steerers.value: [
+            name for name in repo.family_repo["HCM"] if not "BM" in name
+        ],
+    }
+    return BessyIIFamilyTree(families=families)

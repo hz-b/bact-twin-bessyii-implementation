@@ -6,87 +6,26 @@ Please note:
 Todo:
    Split up content in different modules
 """
-import functools
-from dataclasses import dataclass
-from typing import Sequence, Tuple
+
+from typing import Tuple, Union
 
 from bact_twin_architecture.data_model.command import Command
-from bact_twin_architecture.interfaces.identifier import Identifier
-from bact_twin_architecture.interfaces.state_conversion import StateConversion
+from bact_twin_architecture.data_model.identifiers import (
+    LatticeElementPropertyID,
+    DevicePropertyID,
+)
+from bact_twin_architecture.data_model.unit_conversion_repo import UnitConversionRepo
+from bact_twin_architecture.data_model.unit_conversion_info import (
+    LinearUnitConversionInfo,
+)
+from bact_twin_architecture.utils.unit_conversion import (
+    UnitConversion,
+    LinearUnitConversion,
+)
 
-from bact_twin_bessyii_impl.bl.io.pytac_repositories import LinearUnitConversionInfo
-
-
-class UnitConversion(StateConversion):
-    """a one dimensional conversion"""
-
-
-class LinearUnitConversion(UnitConversion):
-    """uses linear polynom.
-
-    Warning:
-        inverse will fail for slopes of 0
-    """
-
-    def __init__(self, *, intercept: float, slope: float):
-        self.intercept = intercept
-        self.slope = slope
-
-    def forward(self, state: float) -> float:
-        return self.intercept + self.slope * state
-
-    def inverse(self, state: float) -> float:
-        return (state - self.intercept) / self.slope
-
-
-@dataclass(frozen=True)
-class UnitConversionRepo:
-    """
-
-    Todo:
-       should it derive from some interface?
-    """
-    conversion_info: Tuple[LinearUnitConversionInfo]
-
-    def _lookup_table_create(self):
-        return {
-            (item.position_name, item.property): item
-            for item in self.conversion_info
-            if item.position_name is not None and item.property is not None
-        }
-
-    @functools.lru_cache(maxsize=1)
-    def _lookup_table(self):
-        r = self._lookup_table_create()
-        return r
-
-    def get(self, pos_name: str, property: str):
-        """
-        Todo:
-            should this method be an overload of an abstract method?
-        """
-        lut = self._lookup_table()
-        obj = lut[(pos_name, property)]
-        return obj
-
-
-class PropertyRenamer:
-    """I guess that will not be that simple
-
-    Todo:
-        implement it properly!
-        Should map id, property to id, property
-
-        Define interface class for it
-    """
-
-    def forward(self, id: str, property: str) -> str:
-        if property == "x_kick":
-            return "current"
-        elif property == "y_kick":
-            return "current"
-        else:
-            raise NotImplementedError(f"not handling {property}. I am hack anyway")
+from bact_twin_bessyii_impl.bl.element_property_tranformer import (
+    IdentifierPropertyTransformer,
+)
 
 
 class UnitConversionFacade:
@@ -94,27 +33,31 @@ class UnitConversionFacade:
     Todo:
         split it up in different objects?
         seems to have more than one responsibility
+
+        Move it to bact_twin_architecture.utlils?
     """
 
     def __init__(self, unit_conversion_repo: UnitConversionRepo):
         """create the factory based on the repo that reads in the pytac files"""
         self.unit_conversion_repo = unit_conversion_repo
-        self.property_renamer = PropertyRenamer()
+        self.property_renamer = IdentifierPropertyTransformer()
 
     def get_conversion_info(
-        self, id: Identifier, property: str
+        self, id_: Union[LatticeElementPropertyID, DevicePropertyID]
     ) -> LinearUnitConversionInfo:
-        return self.unit_conversion_repo.get(id, property)
+        return self.unit_conversion_repo.get(id_)
 
-    def get_converter(self, id: Identifier, property: str) -> UnitConversion:
+    def get_converter(
+        self, id_: Union[LatticeElementPropertyID, DevicePropertyID]
+    ) -> UnitConversion:
         """
         Todo:
             revisit to be far more flexible: not only linear conversion
         """
-        linear = self.unit_conversion_repo.get(id, property)
+        linear = self.unit_conversion_repo.get(id_)
         return LinearUnitConversion(slope=linear.slope, intercept=linear.intercept)
 
-    def update_forward(self, id: Identifier, property: str, value: float) -> float:
+    def update_forward(self, id_: LatticeElementPropertyID, value: float) -> float:
         """
         Todo:
             Need to distinquish ...
@@ -124,24 +67,29 @@ class UnitConversionFacade:
 
             These then start to mix
         """
-        return self.get_converter(id, property).forward(value)
+        return self.get_converter(id_).forward(value)
 
-    def update_inverse(self, id: Identifier, property: str, value: float) -> float:
-        return self.get_converter(id, property).inverse(value)
+    def update_inverse(self, id_: DevicePropertyID, value: float) -> float:
+        return self.get_converter(id_).inverse(value)
 
     def command_rewrite_forward(self, cmd: Command) -> Command:
         """
         Todo:
             just take it out and make it a function?
         """
-        info = self.get_conversion_info(cmd.id, cmd.property)
-        assert info.device_name is not None
+        lat_prop_id = LatticeElementPropertyID(
+            element_name=cmd.id, property=cmd.property
+        )
+        dev_prop_id = self.property_renamer.forward(lat_prop_id)
+        # Todo: fix this hack ... this info should be part of the renamer
+        info = self.get_conversion_info(lat_prop_id)
+        dev_name = info.conversion_id.device_property_id.device_name
+
+        assert dev_name is not None
         ncmd = Command(
-            id=info.device_name,
-            property=self.property_renamer.forward(id=cmd.id, property=cmd.property),
-            value=self.update_forward(
-                id=cmd.id, property=cmd.property, value=cmd.value
-            ),
+            id=dev_name,
+            property=dev_prop_id.property,
+            value=self.update_forward(id_=lat_prop_id, value=cmd.value),
             behaviour_on_error=cmd.behaviour_on_error,
         )
         return ncmd

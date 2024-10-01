@@ -23,9 +23,8 @@ class ValidFamilyNames(Enum):
 class BessyIIFamilyTree(FamilyTree):
     """Some first families"""
 
-    def __init__(self):
-        self.families = dict()
-        raise NotImplementedError("Use derived class")
+    def __init__(self, families):
+        self.families = families
 
     def get(self, family_name: str):
         bessyii_family_name = ValidFamilyNames(family_name)
@@ -36,22 +35,3 @@ class BessyIIFamilyTree(FamilyTree):
             )
         else:
             return self.families[bessyii_family_name.value]
-
-
-class PyTACBasedBessyIIFamilyTree(BessyIIFamilyTree):
-    """Create BESSYII family tree from pytac
-
-    Todo:
-       in dedicated module. Should it not be rather
-       created by a factory
-    """
-
-    def __init__(self, repo):
-        self.families = {
-            ValidFamilyNames.vertical_steerers.value: repo.family_repo["VCM"],
-            # I decided: no dipole steerers in vertical steerers
-            # as standard praxis at HZB
-            ValidFamilyNames.horizontal_steerers.value: [
-                name for name in repo.family_repo["HCM"] if not "BM" in name
-            ],
-        }

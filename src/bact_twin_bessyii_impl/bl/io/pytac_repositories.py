@@ -1,3 +1,10 @@
+"""Loading files as typically used in pytac
+
+**NB**: The element sequence id is not used here.
+        The name of the lattice element is
+        used as position name instead.
+
+"""
 from dataclasses import dataclass
 from importlib.resources import files
 import logging

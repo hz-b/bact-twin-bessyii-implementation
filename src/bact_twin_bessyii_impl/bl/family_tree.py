@@ -1,5 +1,11 @@
-"""
+"""Demonstrator of handling families of devices
 
+Currently providing lookup for horizontal and
+vertical steerers
+
+Todo:
+   review which part should be moved to architecture
+   or reference implementation
 """
 from enum import Enum
 
@@ -7,16 +13,16 @@ from bact_twin_architecture.interfaces.family_tree import FamilyTree
 
 
 class ValidFamilyNames(Enum):
-    """Valid family name
-    """
+    """Valid family name"""
+
     horizontal_steerers = "horizontal_steerers"
     vertical_steerers = "vertical_steerers"
     steerers = "steerers"
 
 
 class BessyIIFamilyTree(FamilyTree):
-    """
-    """
+    """Some first families"""
+
     def __init__(self):
         self.families = dict()
         raise NotImplementedError("Use derived class")
@@ -25,19 +31,27 @@ class BessyIIFamilyTree(FamilyTree):
         bessyii_family_name = ValidFamilyNames(family_name)
         if bessyii_family_name == ValidFamilyNames.steerers:
             return (
-                    self.families[ValidFamilyNames.horizontal_steerers.value] +
-                    self.families[ValidFamilyNames.vertical_steerers.value]
+                self.families[ValidFamilyNames.horizontal_steerers.value]
+                + self.families[ValidFamilyNames.vertical_steerers.value]
             )
         else:
             return self.families[bessyii_family_name.value]
 
 
 class PyTACBasedBessyIIFamilyTree(BessyIIFamilyTree):
+    """Create BESSYII family tree from pytac
+
+    Todo:
+       in dedicated module. Should it not be rather
+       created by a factory
+    """
+
     def __init__(self, repo):
         self.families = {
-            ValidFamilyNames.vertical_steerers.value : repo.family_repo["VCM"],
+            ValidFamilyNames.vertical_steerers.value: repo.family_repo["VCM"],
             # I decided: no dipole steerers in vertical steerers
             # as standard praxis at HZB
-            ValidFamilyNames.horizontal_steerers.value : [name for name in repo.family_repo["HCM"] if not "BM" in name],
+            ValidFamilyNames.horizontal_steerers.value: [
+                name for name in repo.family_repo["HCM"] if not "BM" in name
+            ],
         }
-

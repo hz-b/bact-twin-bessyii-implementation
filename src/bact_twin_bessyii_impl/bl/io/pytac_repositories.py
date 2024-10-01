@@ -141,7 +141,7 @@ def create_state_conversion_repository(
                 device_name = lattice_pos_to_devices[item.field]
             except KeyError:
                 logger.error(
-                    f"Don't have any proper maping {elem_name, item.field}",
+                    f"Don't have any proper mapping {elem_name, item.field}",
                 )
                 logger.info(f"Known mappings for {elem_name} are: {lattice_pos_to_devices}")
 

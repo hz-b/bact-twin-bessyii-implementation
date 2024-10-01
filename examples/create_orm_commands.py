@@ -17,6 +17,3 @@ commands = [
 ]
 with open("orm_commands.json", "wt") as fp:
     export_commands(commands, fp)
-
-
-

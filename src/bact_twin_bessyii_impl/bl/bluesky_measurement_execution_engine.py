@@ -12,9 +12,11 @@ Missing features:
   in the databroker
 
 """
+import functools
+from dataclasses import asdict
 from typing import Sequence, Dict
 
-from bact_twin_architecture.data_model.command import Command
+from bact_twin_architecture.data_model.command import Command, CommandSequence
 from bact_twin_architecture.interfaces.measurement_execution_engine import (
     MeasurementExecutionEngine,
 )
@@ -60,7 +62,10 @@ def commands_plan(
             command.value,
         )
         # read all devices
-        yield from bps.trigger_and_read(all_dev)
+        yield from bps.repeat(
+            functools.partial(bps.trigger_and_read, all_dev),
+            num=3
+        )
 
 
 def commands_execution_plan(
@@ -72,7 +77,8 @@ def commands_execution_plan(
 ):
     """Translate commands to bluesky run-engine messages"""
     _md = md or dict()
-    _md.update(dict(commands=commands))
+    # CommandSequence nor Commands is json seriazable ....
+    _md.update(dict(commands=[asdict(cmd) for cmd in commands]))
 
     @bpp.stage_decorator(list(detectors) + list(actuators.values()))
     @bpp.run_decorator(md=_md)

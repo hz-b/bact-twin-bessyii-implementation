@@ -7,72 +7,39 @@ Todo:
    Split up content in different modules
 """
 
-from typing import Tuple, Union
+from typing import Union
 
 from bact_twin_architecture.data_model.command import Command
 from bact_twin_architecture.data_model.identifiers import (
     LatticeElementPropertyID,
-    DevicePropertyID,
+    DevicePropertyID, ConversionID,
 )
-from bact_twin_architecture.data_model.unit_conversion_repo import UnitConversionRepo
-from bact_twin_architecture.data_model.unit_conversion_info import (
-    LinearUnitConversionInfo,
-)
+from bact_twin_architecture.interfaces.command_rewritter import CommandRewriterBase
+from bact_twin_architecture.interfaces.translator_service import TranslatorServiceBase
 from bact_twin_architecture.utils.unit_conversion import (
     UnitConversion,
     LinearUnitConversion,
 )
 
-from bact_twin_bessyii_impl.bl.element_property_tranformer import (
-    IdentifierPropertyTransformer,
-)
+from bact_twin_bessyii_impl.bl.liaison_manager import  LiaisonManager
 
 
-class UnitConversionFacade:
+class CommandRewriter(CommandRewriterBase):
     """
     Todo:
         split it up in different objects?
         seems to have more than one responsibility
 
-        Move it to bact_twin_architecture.utlils?
+        Move it to bact_twin_architecture.utils?
     """
 
-    def __init__(self, unit_conversion_repo: UnitConversionRepo):
+    def __init__(self, translation_service: TranslatorServiceBase):
         """create the factory based on the repo that reads in the pytac files"""
-        self.unit_conversion_repo = unit_conversion_repo
-        self.property_renamer = IdentifierPropertyTransformer()
+        self.translator_service = translation_service
+        self.liaison_manager = LiaisonManager()
 
-    def get_conversion_info(
-        self, id_: Union[LatticeElementPropertyID, DevicePropertyID]
-    ) -> LinearUnitConversionInfo:
-        return self.unit_conversion_repo.get(id_)
 
-    def get_converter(
-        self, id_: Union[LatticeElementPropertyID, DevicePropertyID]
-    ) -> UnitConversion:
-        """
-        Todo:
-            revisit to be far more flexible: not only linear conversion
-        """
-        linear = self.unit_conversion_repo.get(id_)
-        return LinearUnitConversion(slope=linear.slope, intercept=linear.intercept)
-
-    def update_forward(self, id_: LatticeElementPropertyID, value: float) -> float:
-        """
-        Todo:
-            Need to distinquish ...
-            id: lattice identifer or device identifier
-            Please note, often the same names are used for the lattice
-            identifier and the device identifier
-
-            These then start to mix
-        """
-        return self.get_converter(id_).forward(value)
-
-    def update_inverse(self, id_: DevicePropertyID, value: float) -> float:
-        return self.get_converter(id_).inverse(value)
-
-    def command_rewrite_forward(self, cmd: Command) -> Command:
+    def backward(self, cmd: Command) -> Command:
         """
         Todo:
             just take it out and make it a function?
@@ -80,16 +47,41 @@ class UnitConversionFacade:
         lat_prop_id = LatticeElementPropertyID(
             element_name=cmd.id, property=cmd.property
         )
-        dev_prop_id = self.property_renamer.forward(lat_prop_id)
-        # Todo: fix this hack ... this info should be part of the renamer
-        info = self.get_conversion_info(lat_prop_id)
-        dev_name = info.conversion_id.device_property_id.device_name
+        dev_prop_id = self.liaison_manager.forward(lat_prop_id)
+        translation_object = self.translator_service.get(
+            ConversionID(lattice_property_id=lat_prop_id, device_property_id=dev_prop_id)
+        )
 
-        assert dev_name is not None
+        assert dev_prop_id.device_name is not None
+
         ncmd = Command(
-            id=dev_name,
+            id=dev_prop_id.device_name,
             property=dev_prop_id.property,
-            value=self.update_forward(id_=lat_prop_id, value=cmd.value),
+            value=translation_object.forward(cmd.value),
             behaviour_on_error=cmd.behaviour_on_error,
         )
         return ncmd
+
+    def forward(self, cmd: Command) -> Command:
+        """
+        Todo:
+            just take it out and make it a function?
+        """
+        lat_prop_id = LatticeElementPropertyID(
+            element_name=cmd.id, property=cmd.property
+        )
+        dev_prop_id = self.liaison_manager.forward(lat_prop_id)
+        translation_object = self.translator_service.get(
+            ConversionID(lattice_property_id=lat_prop_id, device_property_id=dev_prop_id)
+        )
+
+        assert dev_prop_id.device_name is not None
+
+        ncmd = Command(
+            id=dev_prop_id.device_name,
+            property=dev_prop_id.property,
+            value=translation_object.forward(cmd.value),
+            behaviour_on_error=cmd.behaviour_on_error,
+        )
+        return ncmd
+

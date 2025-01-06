@@ -105,9 +105,6 @@ def create_device_repository(
     return devices_property_mapping
 
 
-
-
-
 def create_state_conversion_repository(
         element_names : Sequence[str],
         poly_data_info : pd.DataFrame,

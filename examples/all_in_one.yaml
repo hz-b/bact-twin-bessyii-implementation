@@ -1,0 +1,16 @@
+accelerator_complex : BESSY_II
+machines:
+    - ring
+    - booster
+    - transfer line
+    - injection line
+    - linac
+    - gun
+
+ring :
+  lattice : bessyii-lattice
+  devices : bessyii-devices
+
+devices :
+   - Q1MPD1R
+   - Q1M

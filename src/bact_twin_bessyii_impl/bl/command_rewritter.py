@@ -39,15 +39,15 @@ class CommandRewriter(CommandRewriterBase):
         self.liaison_manager = LiaisonManager()
 
 
-    def backward(self, cmd: Command) -> Command:
+    def inverse(self, cmd: Command) -> Command:
         """
         Todo:
             just take it out and make it a function?
         """
-        lat_prop_id = LatticeElementPropertyID(
-            element_name=cmd.id, property=cmd.property
+        dev_prop_id = DevicePropertyID(
+            device_name=cmd.id, property=cmd.property
         )
-        dev_prop_id = self.liaison_manager.forward(lat_prop_id)
+        lat_prop_id = self.liaison_manager.inverse(dev_prop_id)
         translation_object = self.translator_service.get(
             ConversionID(lattice_property_id=lat_prop_id, device_property_id=dev_prop_id)
         )
@@ -55,9 +55,9 @@ class CommandRewriter(CommandRewriterBase):
         assert dev_prop_id.device_name is not None
 
         ncmd = Command(
-            id=dev_prop_id.device_name,
-            property=dev_prop_id.property,
-            value=translation_object.forward(cmd.value),
+            id=lat_prop_id.element_name,
+            property=lat_prop_id.property,
+            value=translation_object.inverse(cmd.value),
             behaviour_on_error=cmd.behaviour_on_error,
         )
         return ncmd

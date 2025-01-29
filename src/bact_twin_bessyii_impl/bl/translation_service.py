@@ -12,10 +12,15 @@ class TranslationService(TranslatorServiceBase):
             currently the translation service only uses
             lattice id as its inputs, needs to be pushed forward
             to use ConversionID properly
+
+            Need to implement whole functionallity
     """
     def __init__(self, conversion_info: Sequence[object]):
          self.conversion_info = {item.conversion_id.lattice_property_id: item for item in conversion_info}
 
     def get(self, id_: ConversionID) -> StateConversion:
+        if id_.lattice_property_id.property in ("x", "y"):
+            # no translation required
+            return LinearUnitConversion(slope=1, intercept=0)
         linear_model = self.conversion_info[id_.lattice_property_id]
         return LinearUnitConversion(slope=linear_model.slope, intercept=linear_model.intercept)

@@ -7,7 +7,7 @@ Todo:
    Split up content in different modules
 """
 
-from typing import Union
+from typing import Union, Sequence
 
 from bact_twin_architecture.data_model.command import Command
 from bact_twin_architecture.data_model.identifiers import (
@@ -15,6 +15,7 @@ from bact_twin_architecture.data_model.identifiers import (
     DevicePropertyID, ConversionID,
 )
 from bact_twin_architecture.interfaces.command_rewritter import CommandRewriterBase
+from bact_twin_architecture.interfaces.liaison_manager import LiaisonManagerBase
 from bact_twin_architecture.interfaces.translator_service import TranslatorServiceBase
 from bact_twin_architecture.utils.unit_conversion import (
     UnitConversion,
@@ -33,13 +34,12 @@ class CommandRewriter(CommandRewriterBase):
         Move it to bact_twin_architecture.utils?
     """
 
-    def __init__(self, translation_service: TranslatorServiceBase):
+    def __init__(self, liasion_manager: LiaisonManagerBase, translation_service: TranslatorServiceBase):
         """create the factory based on the repo that reads in the pytac files"""
         self.translator_service = translation_service
-        self.liaison_manager = LiaisonManager()
+        self.liaison_manager = liasion_manager
 
-
-    def inverse(self, cmd: Command) -> Command:
+    def inverse(self, cmd: Command) -> Sequence[Command]:
         """
         Todo:
             just take it out and make it a function?
@@ -47,7 +47,13 @@ class CommandRewriter(CommandRewriterBase):
         dev_prop_id = DevicePropertyID(
             device_name=cmd.id, property=cmd.property
         )
-        lat_prop_id = self.liaison_manager.inverse(dev_prop_id)
+        lat_prop_ids = self.liaison_manager.inverse(dev_prop_id)
+
+        return [self.inverse_translate_one(cmd, dev_prop_id, lat_prop_id) for lat_prop_id in lat_prop_ids]
+
+    def inverse_translate_one(self, cmd: Command, dev_prop_id: DevicePropertyID,
+                                  lat_prop_id: LatticeElementPropertyID) -> Command:
+
         translation_object = self.translator_service.get(
             ConversionID(lattice_property_id=lat_prop_id, device_property_id=dev_prop_id)
         )
@@ -62,7 +68,7 @@ class CommandRewriter(CommandRewriterBase):
         )
         return ncmd
 
-    def forward(self, cmd: Command) -> Command:
+    def forward(self, cmd: Command) -> Sequence[Command]:
         """
         Todo:
             just take it out and make it a function?
@@ -70,7 +76,13 @@ class CommandRewriter(CommandRewriterBase):
         lat_prop_id = LatticeElementPropertyID(
             element_name=cmd.id, property=cmd.property
         )
-        dev_prop_id = self.liaison_manager.forward(lat_prop_id)
+        dev_prop_ids = self.liaison_manager.forward(lat_prop_id)
+        return [self.forward_translate_one(cmd, lat_prop_id, dev_prop_id) for dev_prop_id in dev_prop_ids]
+
+    def forward_translate_one(self, cmd: Command,
+        lat_prop_id: LatticeElementPropertyID,
+        dev_prop_id: DevicePropertyID,
+    ) -> Command:
         translation_object = self.translator_service.get(
             ConversionID(lattice_property_id=lat_prop_id, device_property_id=dev_prop_id)
         )

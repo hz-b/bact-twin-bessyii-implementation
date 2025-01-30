@@ -1,6 +1,7 @@
 from typing import Mapping, Sequence
 
 from bact_twin_architecture.data_model.identifiers import ConversionID
+from bact_twin_architecture.interfaces.lookup_element import LookupElement
 from bact_twin_architecture.interfaces.state_conversion import StateConversion
 from bact_twin_architecture.interfaces.translator_service import TranslatorServiceBase
 from bact_twin_architecture.utils.unit_conversion import LinearUnitConversion
@@ -13,13 +14,13 @@ class TranslationService(TranslatorServiceBase):
             lattice id as its inputs, needs to be pushed forward
             to use ConversionID properly
 
-            Need to implement whole functionallity
+            Need to implement whole functionality
     """
-    def __init__(self, conversion_info: Sequence[object]):
-         self.conversion_info = {item.conversion_id.lattice_property_id: item for item in conversion_info}
+    def __init__(self, conversion_info: Sequence[LookupElement]):
+         self.conversion_info = {item.id().lattice_property_id: item for item in conversion_info}
 
     def get(self, id_: ConversionID) -> StateConversion:
-        if id_.lattice_property_id.property in ("x", "y"):
+        if id_.lattice_property_id.property in ("x", "y", "frequency", "K"):
             # no translation required
             return LinearUnitConversion(slope=1, intercept=0)
         linear_model = self.conversion_info[id_.lattice_property_id]

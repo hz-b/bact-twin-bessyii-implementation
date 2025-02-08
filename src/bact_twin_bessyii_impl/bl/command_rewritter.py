@@ -17,12 +17,6 @@ from bact_twin_architecture.data_model.identifiers import (
 from bact_twin_architecture.interfaces.command_rewritter import CommandRewriterBase
 from bact_twin_architecture.interfaces.liaison_manager import LiaisonManagerBase
 from bact_twin_architecture.interfaces.translator_service import TranslatorServiceBase
-from bact_twin_architecture.utils.unit_conversion import (
-    UnitConversion,
-    LinearUnitConversion,
-)
-
-from bact_twin_bessyii_impl.bl.liaison_manager import  LiaisonManager
 
 
 class CommandRewriter(CommandRewriterBase):

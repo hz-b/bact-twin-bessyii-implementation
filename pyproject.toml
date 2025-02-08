@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "bact_twin_bessyii_impl"
-version = "0.0.1"
+version = "0.0.2"
 description = "BACT twin architecture"
 authors = ["Waheedullah Sulaiman Khail", "Pierre Schnizer"]
 license = "GPL-3.0"
@@ -12,3 +12,8 @@ homepage = "https://github.com/hz-b/bact-twin-architecture-bessyii-impl"
 documentation = "https://github.com/hz-b/bact-twin-architecture-bessyii-impl"
 repository = "https://github.com/hz-b/bact-twin-architecture-bessyii-impl"
 keywords = []
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+pydantic = "*"
+bact_twin_architecture = "*"

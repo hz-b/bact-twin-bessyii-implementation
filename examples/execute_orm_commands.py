@@ -11,6 +11,7 @@ Here the steerers are created with devices of minimal functionallity.
 Proper devices would use bluesky's synchronisation abilities.
 
 """
+import itertools
 from dataclasses import asdict
 
 from bact_twin_architecture.data_model.command import Command, CommandSequence
@@ -20,30 +21,29 @@ from bact_twin_bessyii_impl.bl.bessyii_bluesky_me import setup
 from bact_twin_bessyii_impl.bl.bluesky_measurement_execution_engine import (
     BlueskyMeasurementExecutionEngine,
 )
-from bact_twin_bessyii_impl.bl.command_rewritter import CommandRewriter
-from bact_twin_bessyii_impl.bl.io.pytac_repositories import PyTACRepository
 
+from bact_twin_bessyii_impl.bl.command_rewritter import CommandRewriter
 
 from bluesky.run_engine import RunEngine
 from bluesky.callbacks import LiveTable
 from databroker import catalog
 import json
 
-from bact_twin_bessyii_impl.bl.translation_service import TranslationService
+from bact_twin_bessyii_impl.config.liasion_translator_setup import build_managers
 
 # use data stored in pytac data csv files to crate
 # required repositories
-repo = PyTACRepository()
-
-transformer = CommandRewriter(TranslationService(conversion_info=repo.state_conversion_repo))
+lm, tm = build_managers()
+command_rewritter=CommandRewriter(liasion_manager=lm, translation_service=tm)
 # load the commands that operate in lattice space and transform
 # them to machine state
 with open("orm_commands.json") as fp:
     tmp = json.load(fp)
+
 cmds_on_lattice = CommandSequence(commands=[Command(**d) for d in tmp["commands"]])
 cmds_on_machine = CommandSequence(
     commands=[
-        transformer.forward(cmd) for cmd in cmds_on_lattice.commands
+        command_rewritter.forward(cmd) for cmd in cmds_on_lattice.commands
     ]
 )
 
@@ -51,7 +51,7 @@ cmds_on_machine = CommandSequence(
 # for a whole accelerator it would be a bit more complex
 # again review if here a software multiplexer would not be closer
 # to the task
-device_ids = set([cmd.id for cmd in cmds_on_machine.commands])
+device_ids = set([cmd.id for cmd in itertools.chain(*cmds_on_machine.commands)])
 
 bpms, steerers = setup(device_ids=tuple(device_ids))
 
@@ -78,7 +78,7 @@ RE.subscribe(db.v1.insert)
 md = dict(commands_on_lattice=[asdict(cmd) for cmd in cmds_on_lattice.commands])
 mexec = BlueskyMeasurementExecutionEngine(run_engine=RE)
 mexec.execute(
-    commands=cmds_on_machine.commands,
+    commands_collection=cmds_on_machine.commands,
     # need to add bpms
     detectors=[bpms],
     actuators=actuators,

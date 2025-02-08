@@ -28,7 +28,7 @@ from ophyd import Device, Signal
 
 
 def commands_plan(
-    commands: Sequence[Command],
+    commands_collection: Sequence[Sequence[Command]],
     detectors: Sequence[Device],
     actuators: Dict[str, Device],
     info_signals: Dict[str, Signal],
@@ -46,30 +46,31 @@ def commands_plan(
     dev_name = info_signals["device_name"]
     ch_name = info_signals["channel_name"]
     ch_val = info_signals["channel_value"]
-    for command in commands:
-        # first select the device
-        t_device = actuators[command.id]
-        channel = getattr(t_device, command.property)
-        # then apply it to all
-        yield from bps.mv(
-            dev_name,
-            str(command.id),
-            ch_name,
-            str(command.property),
-            ch_val,
-            command.value,
-            channel,
-            command.value,
-        )
-        # read all devices
-        yield from bps.repeat(
-            functools.partial(bps.trigger_and_read, all_dev),
-            num=3
-        )
+    for commands in commands_collection:
+        for command in commands:
+            # first select the device
+            t_device = actuators[command.id]
+            channel = getattr(t_device, command.property)
+            # then apply it to all
+            yield from bps.mv(
+                dev_name,
+                str(command.id),
+                ch_name,
+                str(command.property),
+                ch_val,
+                command.value,
+                channel,
+                command.value,
+            )
+            # read all devices
+            yield from bps.repeat(
+                functools.partial(bps.trigger_and_read, all_dev),
+                num=3
+            )
 
 
 def commands_execution_plan(
-    commands: Sequence[Command],
+    commands_collection: Sequence[Sequence[Command]],
     detectors: Sequence[Device],
     actuators: Dict[str, Device],
     info_signals: Dict[str, Signal],
@@ -78,13 +79,18 @@ def commands_execution_plan(
     """Translate commands to bluesky run-engine messages"""
     _md = md or dict()
     # CommandSequence nor Commands is json seriazable ....
-    _md.update(dict(commands=[asdict(cmd) for cmd in commands]))
+    _md.update(
+        dict(commands_collection=[
+            dict(commands=[asdict(cmd) for cmd in commands])
+            for commands in commands_collection
+        ])
+    )
 
     @bpp.stage_decorator(list(detectors) + list(actuators.values()))
     @bpp.run_decorator(md=_md)
     def inner():
         r = yield from commands_plan(
-            commands=commands,
+            commands_collection=commands_collection,
             detectors=detectors,
             actuators=actuators,
             info_signals=info_signals,
@@ -108,14 +114,14 @@ class BlueskyMeasurementExecutionEngine(MeasurementExecutionEngine):
 
     def execute(
         self,
-        commands: Sequence[Command],
+        commands_collection: Sequence[Sequence[Command]],
         detectors: Sequence[Device],
         actuators: Dict[str, Device],
         info_signals: Dict[str, Signal],
         md: Dict[str, object] = None,
     ) -> str:
         plan = commands_execution_plan(
-            commands=commands,
+            commands_collection=commands_collection,
             detectors=detectors,
             actuators=actuators,
             info_signals=info_signals,
